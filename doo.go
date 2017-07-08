@@ -56,9 +56,14 @@ type doo struct {
 	homeDir       string
 }
 
+type dooDefault struct {
+	Cwd string
+}
+
 type dooConfig struct {
-	Path    string
-	Targets []*Target
+	Path     string
+	Defaults dooDefault
+	Targets  []*Target
 }
 
 func newDoo() *doo {
@@ -126,6 +131,16 @@ func (d *doo) validateTargets(errs *[]string) {
 	}
 }
 
+func (d *doo) expandPath(path string, from string) string {
+	if path[0] == '~' {
+		return d.homeDir + path[1:]
+	} else if filepath.IsAbs(path) {
+		return path
+	} else {
+		return filepath.Join(from, path)
+	}
+}
+
 func (d *doo) loadConfigFile(fpath string) error {
 	dir := filepath.Dir(fpath)
 	conf := dooConfig{Path: fpath, Targets: nil}
@@ -134,17 +149,18 @@ func (d *doo) loadConfigFile(fpath string) error {
 		return err
 	}
 
+	var defaultCwd string
+	if len(conf.Defaults.Cwd) > 0 {
+		defaultCwd = d.expandPath(conf.Defaults.Cwd, dir)
+	}
+
 	for _, target := range conf.Targets {
 		target.config = &conf
 
-		if len(target.Cwd) > 0 {
-			if target.Cwd[0] == '~' {
-				target.Cwd = d.homeDir + target.Cwd[1:]
-			} else if filepath.IsAbs(target.Cwd) {
-				// everything is good
-			} else {
-				target.Cwd = filepath.Join(dir, target.Cwd)
-			}
+		if len(target.Cwd) == 0 {
+			target.Cwd = defaultCwd
+		} else {
+			target.Cwd = d.expandPath(target.Cwd, dir)
 		}
 	}
 	d.targets = append(d.targets, conf.Targets...)
