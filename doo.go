@@ -46,14 +46,15 @@ type Job struct {
 type jobMap map[string]*Job
 
 type doo struct {
-	targets       []*Target
-	targetMap     map[string]*Target
-	jobs          jobMap
-	startedJobs   int
-	completedJobs int
-	didError      bool
-	completion    chan *Job
-	homeDir       string
+	targets            []*Target
+	targetMap          map[string]*Target
+	jobs               jobMap
+	startedJobs        int
+	completedJobs      int
+	didError           bool
+	completion         chan *Job
+	homeDir            string
+	ignoreDependencies bool
 }
 
 type dooDefault struct {
@@ -184,6 +185,10 @@ func (d *doo) createStartJob(name string) *Job {
 	target := d.targetMap[name]
 	job.target = target
 
+	if d.ignoreDependencies {
+		return job
+	}
+
 	for _, dep := range target.Dependencies {
 		other := d.createStartJob(dep)
 		addJobDependency(job, other)
@@ -204,6 +209,10 @@ func (d *doo) createStopJob(name string) *Job {
 
 	target := d.targetMap[name]
 	job.target = target
+
+	if d.ignoreDependencies {
+		return job
+	}
 
 	for _, other := range target.dependants {
 		otherJob := d.createStopJob(other.Name)
@@ -336,6 +345,7 @@ var (
 	stop    = kingpin.Flag("stop", "Stop specified targets").Bool()
 	list    = kingpin.Flag("list", "List available targets").Bool()
 	load    = kingpin.Flag("load", "Load configuration file").PlaceHolder("CONFIG").ExistingFiles()
+	only    = kingpin.Flag("only", "Ignore dependencies").Bool()
 	targets = kingpin.Arg("target", "Target to start/stop").Strings()
 )
 
@@ -375,6 +385,8 @@ func main() {
 
 	d := newDoo()
 	var l = log.New(os.Stderr, "", 0)
+
+	d.ignoreDependencies = *only
 
 	var loadConfig = func(fpath string) {
 		if err := d.loadConfigFile(fpath); err != nil {
