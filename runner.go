@@ -135,8 +135,7 @@ func (r *launchdRunner) isLoaded(label string) bool {
 		}
 		r.loadedServices = services
 	}
-	_, ok := r.loadedServices[label]
-	return ok
+	return r.loadedServices[label]
 }
 
 func (r *launchdRunner) findLabel(filename string) (string, error) {
