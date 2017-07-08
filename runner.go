@@ -28,8 +28,11 @@ func (t *Target) isExclusive() bool {
 	return len(t.Runner) == 0
 }
 
-func (t *Target) isNoopStop() bool {
-	return len(t.Runner) == 0
+func (job *Job) isNoop() bool {
+	if job.mode == TargetStop {
+		return job.target.Runner == ""
+	}
+	return job.target.Command == ""
 }
 
 func runJob(job *Job) error {

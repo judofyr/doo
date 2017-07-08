@@ -206,9 +206,6 @@ func (d *doo) createStopJob(name string) *Job {
 	job.target = target
 
 	for _, other := range target.dependants {
-		if other.isNoopStop() {
-			continue
-		}
 		otherJob := d.createStopJob(other.Name)
 		addJobDependency(job, otherJob)
 	}
@@ -292,6 +289,9 @@ func bold(s string) string {
 }
 
 func (d *doo) logStart(job *Job) {
+	if job.isNoop() {
+		return
+	}
 	action := "starting"
 	if job.mode == TargetStop {
 		action = "stopping"
@@ -300,6 +300,9 @@ func (d *doo) logStart(job *Job) {
 }
 
 func (d *doo) logComplete(job *Job) {
+	if job.isNoop() {
+		return
+	}
 	dur := job.completedAt.Sub(*job.startedAt)
 	fmt.Printf("<< %s completed in %s\n", bold(job.target.Name), prettyDuration(dur))
 	if job.err != nil {
