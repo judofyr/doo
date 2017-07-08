@@ -26,7 +26,7 @@ command = 'npm run'
 runner = 'tmux'
 
 [[targets]]
-name = 'projectsopen'
+name = 'project-open'
 dependencies = ['project-webpack', 'project-server']
 command = 'open http://localhost:3000/'
 ```
@@ -34,5 +34,5 @@ command = 'open http://localhost:3000/'
 You can now run:
 
 ```
-$ doo projects-open
+$ doo project-open
 ```
