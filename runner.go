@@ -17,7 +17,7 @@ type runner interface {
 }
 
 var runners = map[string]runner{
-	"":        shellRunner{},
+	"shell":   shellRunner{},
 	"tmux":    tmuxRunner{},
 	"launchd": &launchdRunner{},
 }
@@ -28,12 +28,12 @@ func isValidRunner(str string) bool {
 }
 
 func (t *Target) isExclusive() bool {
-	return len(t.Runner) == 0
+	return t.Runner == "shell"
 }
 
 func (job *Job) isNoop() bool {
 	if job.mode == TargetStop {
-		return job.target.Runner == ""
+		return job.target.Runner == "shell"
 	}
 	return job.target.Command == ""
 }

@@ -113,7 +113,7 @@ func (d *doo) validateTargets(errs *[]string) {
 
 		if !isValidRunner(target.Runner) {
 			addError("Target %s in %s has invalid runner: %s", name, path, target.Runner)
-		} else if len(target.Runner) > 0 && len(target.Command) == 0 {
+		} else if target.Runner != "shell" && len(target.Command) == 0 {
 			addError("Target %s in %s is missing command", name, path)
 		}
 
@@ -168,6 +168,10 @@ func (d *doo) loadConfigFile(fpath string) error {
 			target.Cwd = defaultCwd
 		} else {
 			target.Cwd = d.expandPath(target.Cwd, dir)
+		}
+
+		if len(target.Runner) == 0 {
+			target.Runner = "shell"
 		}
 	}
 	d.targets = append(d.targets, conf.Targets...)
