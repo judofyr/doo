@@ -63,7 +63,7 @@ func runJob(job *Job) error {
 			if listens {
 				break
 			}
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(expSleepTime(i))
 		}
 		if !listens {
 			return fmt.Errorf("service didn't listen to: %s", addr)
@@ -183,13 +183,13 @@ func (r *launchdRunner) stop(t *Target) error {
 	}
 	domain := fmt.Sprintf("gui/%s/%s", user.Uid, label)
 
-	for true {
+	for i := 0; ; i++ {
 		cmd := exec.Command("launchctl", "bootout", domain)
 		_, err = combinedOutputError(cmd)
 		if status, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
 			if status == 9216 {
 				// Operation now in progress
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(expSleepTime(i))
 				continue
 			}
 			if status == 768 {
@@ -200,4 +200,12 @@ func (r *launchdRunner) stop(t *Target) error {
 		}
 	}
 	return err
+}
+
+func expSleepTime(i int) time.Duration {
+	var res = 50 * time.Millisecond
+	for ; i > 0; i-- {
+		res *= 2
+	}
+	return res
 }
