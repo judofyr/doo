@@ -424,7 +424,10 @@ func (d *doo) expandTargets(query []string) ([]string, error) {
 		if _, ok := d.targetMap[q]; ok {
 			res = append(res, q)
 		} else {
-			g := glob.MustCompile(q)
+			g, err := glob.Compile(q)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse pattern '%s': %s", q, err)
+			}
 			matchedAnything := false
 			for _, target := range d.targets {
 				if g.Match(target.Name) {
