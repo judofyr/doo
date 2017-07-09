@@ -486,21 +486,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	expandedTargets, err := d.expandTargets(*targets)
+	if err != nil {
+		l.Fatalln(err)
+	}
+
 	if *list {
-		for _, target := range d.targets {
-			fmt.Printf("%s\n", target.Name)
+		if len(*targets) == 0 {
+			for _, target := range d.targets {
+				fmt.Printf("%s\n", target.Name)
+			}
+		} else {
+			for _, targetName := range expandedTargets {
+				fmt.Printf("%s\n", targetName)
+			}
 		}
 		return
 	}
 
-	if len(*targets) == 0 {
+	if len(expandedTargets) == 0 {
 		l.Fatalf("no targets. nothing to do.")
-	}
-
-	expandedTargets, err := d.expandTargets(*targets)
-
-	if err != nil {
-		l.Fatalln(err)
 	}
 
 	if *stop {
