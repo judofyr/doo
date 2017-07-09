@@ -21,6 +21,7 @@ type Target struct {
 	Cwd          string
 	Runner       string
 	Command      string
+	Linear       bool
 	Listens      []string
 	dependants   []*Target
 	config       *dooConfig
@@ -195,13 +196,27 @@ func (d *doo) createStartJob(name string) *Job {
 	target := d.targetMap[name]
 	job.target = target
 
-	if d.ignoreDependencies {
+	depCount := len(target.Dependencies)
+
+	if d.ignoreDependencies || depCount == 0 {
 		return job
 	}
 
-	for _, dep := range target.Dependencies {
-		other := d.createStartJob(dep)
-		addJobDependency(job, other)
+	if target.Linear {
+		// Make the dependencies linearly depend on each other
+		for i := 0; i < depCount-1; i++ {
+			a := d.createStartJob(target.Dependencies[i])
+			b := d.createStartJob(target.Dependencies[i+1])
+			addJobDependency(b, a)
+		}
+		// and this job depends on the last
+		lst := d.createStartJob(target.Dependencies[depCount-1])
+		addJobDependency(job, lst)
+	} else {
+		for _, dep := range target.Dependencies {
+			other := d.createStartJob(dep)
+			addJobDependency(job, other)
+		}
 	}
 
 	return job
