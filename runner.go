@@ -54,9 +54,11 @@ func runJob(job *Job) error {
 	}
 
 	for _, addr := range job.target.Listens {
-		var listens bool
-		for i := 0; i < 10; i++ {
-			listens, err = checkListens(addr)
+		for i := 0; ; i++ {
+			if i >= 10 {
+				return fmt.Errorf("service didn't listen to: %s", addr)
+			}
+			listens, err := checkListens(addr)
 			if err != nil {
 				return err
 			}
@@ -64,9 +66,6 @@ func runJob(job *Job) error {
 				break
 			}
 			time.Sleep(expSleepTime(i))
-		}
-		if !listens {
-			return fmt.Errorf("service didn't listen to: %s", addr)
 		}
 	}
 	return nil
