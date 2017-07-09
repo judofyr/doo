@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/gobwas/glob"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -416,6 +417,30 @@ func (d *doo) configDirectories() []string {
 	return res
 }
 
+func (d *doo) expandTargets(query []string) ([]string, error) {
+	var res []string
+
+	for _, q := range query {
+		if _, ok := d.targetMap[q]; ok {
+			res = append(res, q)
+		} else {
+			g := glob.MustCompile(q)
+			matchedAnything := false
+			for _, target := range d.targets {
+				if g.Match(target.Name) {
+					matchedAnything = true
+					res = append(res, target.Name)
+				}
+			}
+			if !matchedAnything {
+				return nil, fmt.Errorf("no target matched: %s", q)
+			}
+		}
+	}
+
+	return res, nil
+}
+
 func main() {
 	kingpin.Parse()
 
@@ -469,19 +494,19 @@ func main() {
 		l.Fatalf("no targets. nothing to do.")
 	}
 
-	for _, name := range *targets {
-		if _, ok := d.targetMap[name]; !ok {
-			l.Fatalf("no such target: %s", name)
-		}
+	expandedTargets, err := d.expandTargets(*targets)
+
+	if err != nil {
+		l.Fatalln(err)
 	}
 
 	if *stop {
-		for _, name := range *targets {
+		for _, name := range expandedTargets {
 			d.createStopJob(name)
 		}
 		d.runAllJobs()
 	} else {
-		for _, name := range *targets {
+		for _, name := range expandedTargets {
 			d.createStartJob(name)
 		}
 		d.runAllJobs()
