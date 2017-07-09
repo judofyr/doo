@@ -19,10 +19,10 @@ import (
 type Target struct {
 	Name         string
 	Dependencies []string
+	Invokes      []string
 	Cwd          string
 	Runner       string
 	Command      string
-	Linear       bool
 	Listens      []string
 	dependants   []*Target
 	config       *dooConfig
@@ -188,6 +188,7 @@ func addJobDependency(from, to *Job) {
 
 func (d *doo) createStartJob(name string) *Job {
 	job, ok := d.jobs[name]
+
 	if ok {
 		return job
 	}
@@ -204,21 +205,9 @@ func (d *doo) createStartJob(name string) *Job {
 		return job
 	}
 
-	if target.Linear {
-		// Make the dependencies linearly depend on each other
-		for i := 0; i < depCount-1; i++ {
-			a := d.createStartJob(target.Dependencies[i])
-			b := d.createStartJob(target.Dependencies[i+1])
-			addJobDependency(b, a)
-		}
-		// and this job depends on the last
-		lst := d.createStartJob(target.Dependencies[depCount-1])
-		addJobDependency(job, lst)
-	} else {
-		for _, dep := range target.Dependencies {
-			other := d.createStartJob(dep)
-			addJobDependency(job, other)
-		}
+	for _, dep := range target.Dependencies {
+		other := d.createStartJob(dep)
+		addJobDependency(job, other)
 	}
 
 	return job
@@ -285,6 +274,13 @@ func (d *doo) didComplete(job *Job) {
 	if job.err != nil {
 		d.didError = true
 	}
+
+	if job.mode == TargetStart {
+		for _, name := range job.target.Invokes {
+			d.createStartJob(name)
+		}
+	}
+
 	d.logComplete(job)
 }
 
