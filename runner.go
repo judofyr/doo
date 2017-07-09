@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"os/user"
 	"strings"
+	"syscall"
+	"time"
 )
 
 type runner interface {
@@ -167,15 +169,28 @@ func (r *launchdRunner) stop(t *Target) error {
 	if err != nil {
 		return err
 	}
-	if !r.isLoaded(label) {
-		return nil
-	}
+
 	user, err := user.Current()
 	if err != nil {
 		return err
 	}
-	domain := fmt.Sprintf("gui/%s", user.Uid)
-	cmd := exec.Command("launchctl", "bootout", domain, t.Command)
-	_, err = combinedOutputError(cmd)
+	domain := fmt.Sprintf("gui/%s/%s", user.Uid, label)
+
+	for true {
+		cmd := exec.Command("launchctl", "bootout", domain)
+		_, err = combinedOutputError(cmd)
+		if status, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
+			if status == 9216 {
+				// Operation now in progress
+				time.Sleep(500 * time.Millisecond)
+				continue
+			}
+			if status == 768 {
+				// No such process aka: everything is okay!
+				err = nil
+			}
+			break
+		}
+	}
 	return err
 }
