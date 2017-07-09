@@ -145,9 +145,14 @@ func (d *doo) expandPath(path string, from string) string {
 func (d *doo) loadConfigFile(fpath string) error {
 	dir := filepath.Dir(fpath)
 	conf := dooConfig{Path: fpath, Targets: nil}
-	_, err := toml.DecodeFile(fpath, &conf)
+	md, err := toml.DecodeFile(fpath, &conf)
 	if err != nil {
 		return err
+	}
+
+	keys := md.Undecoded()
+	if len(keys) > 0 {
+		return fmt.Errorf("unknown configuration: %v", keys)
 	}
 
 	var defaultCwd string
