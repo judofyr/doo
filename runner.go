@@ -72,6 +72,11 @@ func runJob(job *Job) error {
 }
 
 func checkListens(addr string) (bool, error) {
+	if addr[0] == '/' {
+		_, err := os.Stat(addr)
+		return !os.IsNotExist(err), nil
+	}
+
 	conn, err := net.DialTimeout("tcp", addr, time.Second)
 	if err != nil {
 		operr := err.(*net.OpError)
