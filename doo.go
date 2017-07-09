@@ -56,6 +56,7 @@ type doo struct {
 	didError           bool
 	completion         chan *Job
 	homeDir            string
+	isExclusiveRunning bool
 	ignoreDependencies bool
 }
 
@@ -259,6 +260,9 @@ func (d *doo) startJob(job *Job) {
 	var now = time.Now()
 	job.startedAt = &now
 	d.startedJobs++
+	if job.target.isExclusive() {
+		d.isExclusiveRunning = true
+	}
 	d.logStart(job)
 	go func() {
 		err := runJob(job)
@@ -271,6 +275,9 @@ func (d *doo) startJob(job *Job) {
 
 func (d *doo) didComplete(job *Job) {
 	d.completedJobs++
+	if job.target.isExclusive() {
+		d.isExclusiveRunning = false
+	}
 	for _, other := range job.dependentJobs {
 		other.dependencyCount--
 	}
@@ -281,6 +288,10 @@ func (d *doo) didComplete(job *Job) {
 }
 
 func (d *doo) nextJob() *Job {
+	if d.isExclusiveRunning {
+		return nil
+	}
+
 	for _, job := range d.jobs {
 		if job.startedAt != nil {
 			// Ignore running targets
