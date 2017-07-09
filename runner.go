@@ -110,36 +110,6 @@ type launchdRunner struct {
 	loadedServices map[string]bool
 }
 
-func (r *launchdRunner) isLoaded(label string) bool {
-	if r.loadedServices == nil {
-		services := make(map[string]bool)
-		cmd := exec.Command("launchctl", "list")
-		output, err := combinedOutputError(cmd)
-		if err != nil {
-			return false
-		}
-
-		column := 0
-		start := 0
-		for i, ch := range output {
-			if ch == '\n' {
-				label := output[start:i]
-				services[string(label)] = true
-				column = 0
-			}
-			if ch == '\t' {
-				column++
-				if column == 2 {
-					// third column == label
-					start = i + 1
-				}
-			}
-		}
-		r.loadedServices = services
-	}
-	return r.loadedServices[label]
-}
-
 func (r *launchdRunner) findLabel(filename string) (string, error) {
 	cmd := exec.Command("defaults", "read", filename, "Label")
 	output, err := combinedOutputError(cmd)
@@ -147,13 +117,6 @@ func (r *launchdRunner) findLabel(filename string) (string, error) {
 }
 
 func (r *launchdRunner) start(t *Target) error {
-	label, err := r.findLabel(t.Command)
-	if err != nil {
-		return err
-	}
-	if r.isLoaded(label) {
-		return nil
-	}
 	user, err := user.Current()
 	if err != nil {
 		return err
@@ -161,6 +124,12 @@ func (r *launchdRunner) start(t *Target) error {
 	domain := fmt.Sprintf("gui/%s", user.Uid)
 	cmd := exec.Command("launchctl", "bootstrap", domain, t.Command)
 	_, err = combinedOutputError(cmd)
+	if status, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok {
+		if status == 34048 {
+			// service already loaded
+			err = nil
+		}
+	}
 	return err
 }
 
