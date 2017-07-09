@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
@@ -43,10 +44,47 @@ func runJob(job *Job) error {
 	}
 
 	runner := runners[job.target.Runner]
-	if job.mode == TargetStart {
-		return runner.start(job.target)
+	if job.mode == TargetStop {
+		return runner.stop(job.target)
 	}
-	return runner.stop(job.target)
+
+	err := runner.start(job.target)
+	if err != nil {
+		return err
+	}
+
+	for _, addr := range job.target.Listens {
+		var listens bool
+		for i := 0; i < 10; i++ {
+			listens, err = checkListens(addr)
+			if err != nil {
+				return err
+			}
+			if listens {
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		if !listens {
+			return fmt.Errorf("service didn't listen to: %s", addr)
+		}
+	}
+	return nil
+}
+
+func checkListens(addr string) (bool, error) {
+	conn, err := net.DialTimeout("tcp", addr, time.Second)
+	if err != nil {
+		operr := err.(*net.OpError)
+		if syscallErr, ok := operr.Err.(*os.SyscallError); ok {
+			if syscallErr.Err == syscall.ECONNREFUSED {
+				return false, nil
+			}
+		}
+	} else {
+		conn.Close()
+	}
+	return true, err
 }
 
 func combinedOutputError(cmd *exec.Cmd) ([]byte, error) {

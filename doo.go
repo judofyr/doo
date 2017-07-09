@@ -21,6 +21,7 @@ type Target struct {
 	Cwd          string
 	Runner       string
 	Command      string
+	Listens      []string
 	dependants   []*Target
 	config       *dooConfig
 }
