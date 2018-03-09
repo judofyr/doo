@@ -379,6 +379,7 @@ var (
 	list    = kingpin.Flag("list", "List available targets").Bool()
 	load    = kingpin.Flag("load", "Load configuration file").PlaceHolder("CONFIG").ExistingFiles()
 	only    = kingpin.Flag("only", "Ignore dependencies").Bool()
+	pwd     = kingpin.Flag("pwd", "Prints the directory for the target").Bool()
 	targets = kingpin.Arg("target", "Target to start/stop").Strings()
 )
 
@@ -485,6 +486,14 @@ func main() {
 	expandedTargets, err := d.expandTargets(*targets)
 	if err != nil {
 		l.Fatalln(err)
+	}
+
+	if *pwd {
+		for _, targetName := range expandedTargets {
+			target := d.targetMap[targetName]
+			fmt.Printf("%s\n", target.Cwd)
+		}
+		return
 	}
 
 	if *list {
